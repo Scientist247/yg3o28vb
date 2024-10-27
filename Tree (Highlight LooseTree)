@@ -1,0 +1,34 @@
+-- Define the folder containing "LooseTree" models
+local looseTreeFolder = workspace.World.LooseItems
+local modelName = "LooseTree"
+
+-- Function to create ESP on a model
+local function createESP(model)
+    -- Check if a Highlight already exists to avoid duplicates
+    if not model:FindFirstChildOfClass("Highlight") then
+        local highlight = Instance.new("Highlight")
+        highlight.Adornee = model
+        highlight.FillColor = Color3.fromRGB(144, 238, 144)  -- Light green color
+        highlight.FillTransparency = 0.5                      -- Set transparency
+        highlight.OutlineTransparency = 0                     -- Fully visible outline
+        highlight.Parent = model
+    end
+end
+
+-- Function to check for and highlight all "LooseTree" models
+local function checkForLooseTrees()
+    for _, model in ipairs(looseTreeFolder:GetChildren()) do
+        if model.Name == modelName and model:IsA("Model") then
+            createESP(model)
+        end
+    end
+end
+
+-- Initial check for LooseTree models
+checkForLooseTrees()
+
+-- Periodically check for new "LooseTree" models every 0.1 seconds
+while true do
+    checkForLooseTrees()
+    wait(0.1) -- Wait for 0.1 seconds before checking again
+end
