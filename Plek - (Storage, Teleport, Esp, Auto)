@@ -1,0 +1,183 @@
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create the ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MyGui"
+screenGui.Parent = playerGui
+
+-- Create a Frame for the buttons with rounded corners
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 120)  -- Further shortened height
+frame.Position = UDim2.new(0, 20, 1, -180)  -- Positioned with margin from bottom-left corner
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.BackgroundTransparency = 0.5
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+-- Create a UICorner for rounded corners on the frame
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 10)  -- Adjust radius for roundness
+uiCorner.Parent = frame
+
+-- Function to create buttons with black text
+local function createButton(name, color, position)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.4, 0, 0.2, 0)  -- Adjusted size for spacing
+    button.Position = position
+    button.Text = name
+    button.BackgroundColor3 = color
+    button.TextColor3 = Color3.fromRGB(0, 0, 0)  -- Black text
+    button.Font = Enum.Font.SourceSans
+    button.TextSize = 24
+    button.Parent = frame
+
+    -- Add rounded corners to the button
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 10)
+    buttonCorner.Parent = button
+
+    return button
+end
+
+-- Create buttons
+local sellButton = createButton("Move", Color3.fromRGB(0, 255, 0), UDim2.new(0.05, 0, 0.1, 0))  -- Green
+local magmaButton = createButton("Plek", Color3.fromRGB(2, 200, 255), UDim2.new(0.55, 0, 0.1, 0))  -- Light blue
+local espButton = createButton("ESP", Color3.fromRGB(255, 165, 0), UDim2.new(0.05, 0, 0.4, 0))  -- Orange
+local autoButton = createButton("Auto", Color3.fromRGB(255, 0, 0), UDim2.new(0.55, 0, 0.4, 0))  -- Red
+
+-- Function to handle teleportation of player and models
+local function teleportPlayerAndModels()
+    local modelName = "LooseTree"
+    local targetPosition = Vector3.new(483, 10, 28)
+    local playerOffset = Vector3.new(-20, 20, 0)  -- 20 studs to the left and 20 studs above
+    local looseItemsFolder = workspace.World.LooseItems
+
+    -- Teleport all models named 'LooseTree' to the target position
+    for _, model in ipairs(looseItemsFolder:GetChildren()) do
+        if model.Name == modelName and model:IsA("Model") and model.PrimaryPart then
+            model:SetPrimaryPartCFrame(CFrame.new(targetPosition))
+        end
+    end
+
+    -- Teleport the player with an offset from the target position
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition + playerOffset)
+    end
+end
+
+-- Define the folder containing the "Tree" models
+local treeFolder = workspace.World.TreeRegions.RiverCavePlek
+local modelName = "Tree"
+
+-- Function to create ESP on a model
+local function createESP(model)
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = model
+    highlight.FillColor = Color3.new(1, 0.647, 0)  -- Orange color
+    highlight.FillTransparency = 0.2                 -- Set transparency
+    highlight.OutlineTransparency = 0.5               -- Outline transparency
+    highlight.Parent = model
+
+    -- Set all MeshParts' transparency to 0
+    for _, part in ipairs(model:GetChildren()) do
+        if part:IsA("MeshPart") then
+            part.Transparency = 0  -- Ensure MeshParts are opaque
+        end
+    end
+end
+
+-- Function to remove ESP from a model
+local function removeESP(model)
+    local highlight = model:FindFirstChildOfClass("Highlight")
+    if highlight then
+        highlight:Destroy()
+    end
+end
+
+-- Apply ESP to existing "Tree" models and listen for new ones
+local function applyESP()
+    for _, model in ipairs(treeFolder:GetChildren()) do
+        if model.Name == modelName and model:IsA("Model") then
+            createESP(model)
+        end
+    end
+
+    treeFolder.ChildAdded:Connect(function(model)
+        if model.Name == modelName and model:IsA("Model") then
+            createESP(model)
+        end
+    end)
+
+    treeFolder.ChildRemoved:Connect(function(model)
+        if model.Name == modelName then
+            removeESP(model)
+        end
+    end)
+end
+
+-- Start applying ESP functionality
+local espActive = false -- Track the state of the ESP functionality
+
+espButton.MouseButton1Click:Connect(function()
+    espActive = not espActive -- Toggle ESP activation
+    if espActive then
+        print("ESP activated!")
+        applyESP() -- Call the function to apply ESP
+    else
+        print("ESP deactivated!")
+        for _, model in ipairs(treeFolder:GetChildren()) do
+            removeESP(model) -- Remove ESP from all models
+        end
+    end
+end)
+
+-- Function to find and teleport the player to the OctagonPart of the specified Tree
+local function teleportToTree()
+    local octagonPartName = "OctagonPart"
+    
+    -- Find the Tree model and its OctagonPart
+    for _, model in ipairs(treeFolder:GetChildren()) do
+        if model.Name == modelName and model:IsA("Model") then
+            local octagonPart = model:FindFirstChild(octagonPartName)
+            if octagonPart then
+                -- Teleport the player to the OctagonPart position
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = octagonPart.CFrame
+                end
+                return -- Exit after teleporting
+            end
+        end
+    end
+
+    print("No Tree found with an OctagonPart!")
+end
+
+-- Optional: Add functionality to the buttons
+sellButton.MouseButton1Click:Connect(function()
+    print("Sell button clicked!")
+    teleportPlayerAndModels()  -- Call the function to perform the teleportation
+end)
+
+magmaButton.MouseButton1Click:Connect(function()
+    print("Magma button clicked!")
+    -- Teleport the player to the specified coordinates
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(-3229, -404, 1355)
+    end
+end)
+
+autoButton.MouseButton1Click:Connect(function()
+    print("Auto button clicked!")
+    
+    -- Teleport to the specified coordinates
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(-3229, -404, 1355)
+    end
+
+    -- Wait for 3 seconds before loading the script to teleport to the OctagonPart
+    wait(3)
+
+    -- Call the function to teleport to the Tree's OctagonPart
+    teleportToTree()
+end)
